@@ -27,7 +27,7 @@ def load_max_score():
 MAX_SCORE = load_max_score()
 
 BIRD_IMGS = [pygame.transform.scale2x(pygame.image.load(os.path.join("imgs", f"bird{i}.png"))) for i in range(1, 4)]
-PIPE_IMG = pygame.transform.scale2x(pygame.image.load(os.path.join("imgs", "pipe.png")))
+PIPE_IMGS = [pygame.transform.scale2x(pygame.image.load(os.path.join("imgs", f"pipe{i}.png"))) for i in range(1,4)]
 BASE_IMG = pygame.transform.scale2x(pygame.image.load(os.path.join("imgs", "base.png")))
 BG_IMG = pygame.transform.scale2x(pygame.image.load(os.path.join("imgs", "bg.png")))
 
@@ -87,39 +87,37 @@ class Pipe:
     MAX_FREQ = 0.6
     MIN_V_SPEED = 0.5
     MAX_V_SPEED = 1
+    
 
     def __init__(self, x):
-        self.x = x
+        self.PIPE_IMG = random.choice(PIPE_IMGS)
+        self.x = x + self.PIPE_IMG.get_width()
+        print(self.x)
         self.base_height = random.randrange(150, 350)  # central vertical position
 
         # Sinusoidal parameters
         self.amplitude = random.uniform(self.MIN_AMPLITUDE, self.MAX_AMPLITUDE)
         self.frequency = random.uniform(self.MIN_FREQ, self.MAX_FREQ)
         self.start_time = time.time()
-
         # Random vertical speed (direction included)
         self.v_speed = random.choice([-1, 1]) * random.uniform(self.MIN_V_SPEED, self.MAX_V_SPEED)
 
-        self.PIPE_TOP = pygame.transform.flip(PIPE_IMG, False, True)
-        self.PIPE_BOTTOM = PIPE_IMG
+        self.PIPE_TOP = pygame.transform.flip(self.PIPE_IMG, False, True)
+        self.PIPE_BOTTOM = self.PIPE_IMG
         self.passed = False
 
-        self.GAP = random.randint(200, 300)
+        self.GAP = random.randint(200, 400)
         self.height = self.base_height
         self.top = self.height - self.PIPE_TOP.get_height()
         self.bottom = self.height + self.GAP
 
     def move(self):
-        self.x -= self.VEL  # horizontal movement
-
-        # Update vertical position by sinusoidal oscillation
+        self.x -= self.VEL  
         elapsed = time.time() - self.start_time
         sinusoidal_offset = self.amplitude * math.sin(2 * math.pi * self.frequency * elapsed)
 
-        # Update base height by vertical speed
         self.base_height += self.v_speed
 
-        # Bounce back on vertical limits (between 50 and 450)
         if self.base_height < 50:
             self.base_height = 50
             self.v_speed *= -1
@@ -127,7 +125,6 @@ class Pipe:
             self.base_height = 450
             self.v_speed *= -1
 
-        # Combine base_height + sinusoidal offset for current height
         self.height = self.base_height + sinusoidal_offset
 
         self.top = self.height - self.PIPE_TOP.get_height()
@@ -171,9 +168,9 @@ def draw_window(win, birds, pipes, base, score, gen, alive, paused, fast_mode, p
     win.blit(BG_IMG, (0, 0))
     for i, pipe in enumerate(pipes):
         pipe.draw(win)
-        if i == pipe_ind:
-            pygame.draw.rect(win, (255, 0, 0), (pipe.x, pipe.top, pipe.PIPE_TOP.get_width(), pipe.PIPE_TOP.get_height()), 3)
-            pygame.draw.rect(win, (255, 0, 0), (pipe.x, pipe.bottom, pipe.PIPE_BOTTOM.get_width(), pipe.PIPE_BOTTOM.get_height()), 3)
+        # if i == pipe_ind:
+        #     pygame.draw.rect(win, (255, 0, 0), (pipe.x, pipe.top, pipe.PIPE_TOP.get_width(), pipe.PIPE_TOP.get_height()), 3)
+        #     pygame.draw.rect(win, (255, 0, 0), (pipe.x, pipe.bottom, pipe.PIPE_BOTTOM.get_width(), pipe.PIPE_BOTTOM.get_height()), 3)
     base.draw(win)
     for bird in birds:
         bird.draw(win)
@@ -257,7 +254,7 @@ def main(genomes, config):
         if not fast_mode:
             draw_window(win, birds, pipes, base, score, GEN, len(birds), paused, fast_mode, pipe_ind)
 
-        clock.tick(500 if fast_mode else 100)
+        clock.tick(200 if fast_mode else 30)
 
         for x, bird in enumerate(birds):
             bird.move()
@@ -275,6 +272,7 @@ def main(genomes, config):
         add_pipe = False
         rem = []
         remove_indices = []
+        
 
         for pipe in pipes:
             pipe.move()
@@ -319,23 +317,23 @@ def main(genomes, config):
 
         base.move()
         
-        if score > 20 and alive_count > 5:
-            MAX__RUN_SCORE = 100
-        if score >= MAX_RUN_SCORE:
-            alive_count = len(birds)
-            print(f"Score reached 120, alive birds: {alive_count}")
+        alive_count = len(birds)
+        if score >= 20 and alive_count > 5:
+            MAX_RUN_SCORE = 100
 
-            if 0 < alive_count <= 30:
-                print("Too few birds survived, stopping generation as model is not good.")
+        if score >= MAX_RUN_SCORE:
+            print(f"Score reached {score}, alive birds: {alive_count}")
+
+            if alive_count <= 5:
+                print("Very few birds survived, stopping generation as model is not learning well.")
+                run = False
+            elif alive_count <= 30:
+                print("Not enough birds survived, model needs more training. Stopping generation.")
                 run = False
             else:
                 print("Enough birds survived, resetting population for next round...")
                 reset_population()
-        
-        if score >= 400:
-            print("Score reached 120, resetting birds and environment but continuing training...")
-            reset_population()
-
+                
         if fast_mode:
             draw_window(win, birds, pipes, base, score, GEN, len(birds), paused, fast_mode, pipe_ind)
 
