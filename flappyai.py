@@ -27,7 +27,7 @@ def load_max_score():
 MAX_SCORE = load_max_score()
 
 BIRD_IMGS = [pygame.transform.scale2x(pygame.image.load(os.path.join("imgs", f"bird{i}.png"))) for i in range(1, 4)]
-PIPE_IMGS = [pygame.transform.scale2x(pygame.image.load(os.path.join("imgs", f"pipe{i}.png"))) for i in range(1,4)]
+PIPE_IMGS = [pygame.transform.scale2x(pygame.image.load(os.path.join("imgs", f"pipe{i}.png"))) for i in range(1,6)]
 BASE_IMG = pygame.transform.scale2x(pygame.image.load(os.path.join("imgs", "base.png")))
 BG_IMG = pygame.transform.scale2x(pygame.image.load(os.path.join("imgs", "bg.png")))
 
@@ -90,9 +90,9 @@ class Pipe:
     
 
     def __init__(self, x):
-        self.PIPE_IMG = random.choice(PIPE_IMGS)
-        self.x = x + self.PIPE_IMG.get_width()
-        print(self.x)
+        self.PIPE_TOP = pygame.transform.flip(random.choice(PIPE_IMGS), False, True)
+        self.PIPE_BOTTOM = random.choice(PIPE_IMGS)
+        self.x = x + max(self.PIPE_TOP.get_width(),self.PIPE_BOTTOM.get_width())/2
         self.base_height = random.randrange(150, 350)  # central vertical position
 
         # Sinusoidal parameters
@@ -102,11 +102,10 @@ class Pipe:
         # Random vertical speed (direction included)
         self.v_speed = random.choice([-1, 1]) * random.uniform(self.MIN_V_SPEED, self.MAX_V_SPEED)
 
-        self.PIPE_TOP = pygame.transform.flip(self.PIPE_IMG, False, True)
-        self.PIPE_BOTTOM = self.PIPE_IMG
+        
         self.passed = False
 
-        self.GAP = random.randint(200, 400)
+        self.GAP = random.randint(250, 400)
         self.height = self.base_height
         self.top = self.height - self.PIPE_TOP.get_height()
         self.bottom = self.height + self.GAP
@@ -169,8 +168,8 @@ def draw_window(win, birds, pipes, base, score, gen, alive, paused, fast_mode, p
     for i, pipe in enumerate(pipes):
         pipe.draw(win)
         # if i == pipe_ind:
-        #     pygame.draw.rect(win, (255, 0, 0), (pipe.x, pipe.top, pipe.PIPE_TOP.get_width(), pipe.PIPE_TOP.get_height()), 3)
-        #     pygame.draw.rect(win, (255, 0, 0), (pipe.x, pipe.bottom, pipe.PIPE_BOTTOM.get_width(), pipe.PIPE_BOTTOM.get_height()), 3)
+            # pygame.draw.rect(win, (255, 0, 0), (pipe.x, pipe.top, pipe.PIPE_TOP.get_width(), pipe.PIPE_TOP.get_height()), 3)
+            # pygame.draw.rect(win, (255, 0, 0), (pipe.x, pipe.bottom, pipe.PIPE_BOTTOM.get_width(), pipe.PIPE_BOTTOM.get_height()), 3)
     base.draw(win)
     for bird in birds:
         bird.draw(win)
@@ -204,7 +203,7 @@ def main(genomes, config):
     run = True
     paused = False
     fast_mode = False
-    MAX_RUN_SCORE = 20
+    MAX_RUN_SCORE = 30
     
     def reset_population():
         nonlocal birds, nets, ge, pipes, base, score
@@ -318,9 +317,11 @@ def main(genomes, config):
         base.move()
         
         alive_count = len(birds)
-        if score >= 20 and alive_count > 5:
-            MAX_RUN_SCORE = 100
-
+        if score >= 20: 
+            if alive_count > 5:
+                MAX_RUN_SCORE = 100
+            else:
+                run = False  
         if score >= MAX_RUN_SCORE:
             print(f"Score reached {score}, alive birds: {alive_count}")
 
